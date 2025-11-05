@@ -90,7 +90,7 @@ contract Registry is TaskManager {
         uint64 _submissionID
     ) external {
         DataTypes.ProjectReg memory PR = ProjectRegi[_projectID];
-              DataTypes.TaskCreation memory TC = TaskRegistry[_taskID];
+        DataTypes.TaskCreation memory TC = TaskRegistry[_taskID];
         require(PR.adminAccount == msg.sender, "Must be admin");
         _acceptSubmission(_taskID, _submissionID);
     }
@@ -102,6 +102,11 @@ contract Registry is TaskManager {
     ) public {
         _adminCheck(_projectID);
         _rejectSubmission(_taskID, _submissionID);
+    }
+
+    function changeTaskPayRate(uint64 _projectID, uint64 _taskID, uint256 _amount) external {
+        _adminCheck(_projectID);
+        _changeTaskPayRate(_taskID, _amount);
     }
 
     // function getProjectInfo() public {}

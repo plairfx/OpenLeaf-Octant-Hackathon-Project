@@ -105,6 +105,10 @@ contract RegistryTest is Test {
         registry.registerAsProject(PR);
     }
 
+    // ============================================================
+    // ||                    Tasks                               ||
+    // ============================================================
+
     function test_createTask() public {
         // no project..
         DataTypes.TaskCreation memory TC = DataTypes.TaskCreation(
@@ -156,6 +160,10 @@ contract RegistryTest is Test {
         emit TaskManager.TaskRemoved(1, 1);
         registry.removeTask(1, 1);
     }
+
+    // ============================================================
+    // ||                    SUBMISSIONS                         ||
+    // ============================================================
 
     function test_CreateSubmission() public PRAndTaskCreated {
         vm.startPrank(alice);
@@ -240,12 +248,30 @@ contract RegistryTest is Test {
 
     function test_rejectSubmission() public SubmissionCreated {
         vm.startPrank(alice);
-            vm.expectRevert();
+        vm.expectRevert();
         registry.rejectSubmission(1, 1, 1);
 
         vm.startPrank(admin);
         vm.expectEmit(true, true, true, true);
         emit TaskManager.SubmissionDenied(1, 1);
         registry.rejectSubmission(1, 1, 1);
+    }
+
+    // ============================================================
+    // ||                    ADMIN FUNCTIONS                     ||
+    // ============================================================
+
+    function test_adminChangeTaskPayRate() public SubmissionCreated {
+        DataTypes.TaskCreation memory beforeChange = registry.getTask(1);
+
+        assertEq(beforeChange.amount, 0);
+
+        vm.startPrank(admin);
+
+        registry.changeTaskPayRate(1, 1, 1e6);
+
+        DataTypes.TaskCreation memory afterChange = registry.getTask(1);
+
+        assertEq(afterChange.amount, 1e6);
     }
 }
