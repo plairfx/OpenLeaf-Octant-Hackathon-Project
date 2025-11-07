@@ -233,6 +233,12 @@ contract RegistryTest is Test {
 
         emit TaskManager.SubmissionCreated(1, 1);
         registry.createSubmission(1, SC5);
+
+        DataTypes.SubmissionCreation memory returnSC = registry.getSubmission(
+            1
+        );
+
+        assertEq(keccak256(abi.encode(returnSC)), keccak256(abi.encode(SC5)));
     }
 
     function test_acceptSubmission() public SubmissionCreated {

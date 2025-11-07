@@ -1,0 +1,3 @@
+[submodule "solidity/lib/octant-v2-core"]
+	path = solidity/lib/octant-v2-core
+	url = https://github.com/golemfoundation/octant-v2-core

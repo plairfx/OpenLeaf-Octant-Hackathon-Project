@@ -3,7 +3,10 @@
 import {TaskManager} from "src/TaskManager.sol";
 import {DataTypes} from "src/types/DataTypes.sol";
 
-import {SafeERC20, IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {
+    SafeERC20,
+    IERC20
+} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 pragma solidity 0.8.30;
 
@@ -20,13 +23,12 @@ contract Registry is TaskManager {
     );
 
     mapping(uint64 projectid => DataTypes.ProjectReg) ProjectRegi;
-    // mapping(uint64 projectId =>  )
+    mapping(uint64 projectId => address vault) ProjectVault;
 
     function registerAsProject(DataTypes.ProjectReg memory RG) external {
         if (RG.vault) {
-            require(RG.depositAmount > 0);
             require(RG.token == USDC);
-            // deposit into the vault...
+            // we need to create and deploy some contracts.
         }
         projectID++;
         RG.registered = true;
@@ -104,7 +106,11 @@ contract Registry is TaskManager {
         _rejectSubmission(_taskID, _submissionID);
     }
 
-    function changeTaskPayRate(uint64 _projectID, uint64 _taskID, uint256 _amount) external {
+    function changeTaskPayRate(
+        uint64 _projectID,
+        uint64 _taskID,
+        uint256 _amount
+    ) external {
         _adminCheck(_projectID);
         _changeTaskPayRate(_taskID, _amount);
     }

@@ -3,7 +3,10 @@
 pragma solidity 0.8.30;
 
 import {DataTypes} from "src/types/DataTypes.sol";
-import {SafeERC20, IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {
+    SafeERC20,
+    IERC20
+} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 abstract contract TaskManager {
     using SafeERC20 for IERC20;
@@ -23,6 +26,10 @@ abstract contract TaskManager {
     event SubmissionAccepted(uint64 taskId, uint64 submissionId);
     event SubmissionDenied(uint64 taskId, uint64 submissionId);
 
+    /**
+     * @param _projectId test
+     * @param TC ..
+     */
     function _createTask(
         uint64 _projectId,
         DataTypes.TaskCreation memory TC
@@ -51,8 +58,9 @@ abstract contract TaskManager {
 
         // depositFee.(To migitate the DOS);
         // check if tasks is stll open.
-        // intiialize the struct and store it!.
+        // initiialize the struct and store it!.fo
 
+        // uniswapv4, implementation could be here.
         submissionID++;
         SubmissionRegistry[submissionID] = SC;
 
