@@ -68,6 +68,7 @@ contract RegistryTest is Test {
     modifier ProjectWithVault() {
         vm.startPrank(USDC_WHALE);
         IERC20(USDC).transfer(admin, 1000e6);
+        console.log("balance of", IERC20(USDC).balanceOf(admin));
         vm.startPrank(admin);
         DataTypes.ProjectReg memory PR = DataTypes.ProjectReg(
             "Ethereum Foundation",
@@ -266,7 +267,10 @@ contract RegistryTest is Test {
         registry.removeTask(1, 1);
     }
 
-    function test_createTaskWithYield() public ProjectWithVault {
+    function test_createTaskWithYieldProiftMroeThanAmount()
+        public
+        ProjectWithVault
+    {
         DataTypes.TaskCreation memory TC = DataTypes.TaskCreation(
             1,
             "Ethereum",
@@ -281,9 +285,9 @@ contract RegistryTest is Test {
         vm.roll(block.number + 30 days);
         address _vault = registry.getVault(1);
         uint256 USDCBalanceBefore = IERC20(USDC).balanceOf(address(registry));
-        uint256 SharebalanceAdminBeforeCreatingTask = vault.balanceOf(
-            address(registry)
-        );
+        // uint256 SharebalanceAdminBeforeCreatingTask = vault.balanceOf(
+        //     address(registry)
+        // );
 
         vault = ITokenizedStrategy(_vault);
 
@@ -292,6 +296,58 @@ contract RegistryTest is Test {
 
         vm.startPrank(address(admin));
         registry.createTask(1, TC);
+
+        // uint256 SharebalanceAdminAfterCreatingTask = vault.balanceOf(
+        //     address(registry)
+        // );
+
+        uint256 vBProjectStratAfterReport = IERC4626(SPARK_USDC_VAULT)
+            .balanceOf(address(vault));
+
+        assertGt(IERC20(USDC).balanceOf(address(registry)), USDCBalanceBefore);
+        console.log("Test1");
+        assertGt(vBProjectStratBeforeReport, vBProjectStratAfterReport);
+        console.log("Test1");
+    }
+
+    function test_createTaskWithYieldProfitLessThanAmount()
+        public
+        ProjectWithVault
+    {
+        vm.startPrank(USDC_WHALE);
+        IERC20(USDC).transfer(admin, 10e6);
+
+        DataTypes.TaskCreation memory TC = DataTypes.TaskCreation(
+            1,
+            "Ethereum",
+            "Create Contract",
+            "Create SMC",
+            USDC,
+            3e6,
+            false
+        );
+
+        skip(15 days);
+        vm.roll(block.number + 15 days);
+        address _vault = registry.getVault(1);
+        uint256 USDCBalanceBefore = IERC20(USDC).balanceOf(address(registry));
+        uint256 SharebalanceAdminBeforeCreatingTask = vault.balanceOf(
+            address(registry)
+        );
+        uint256 adminBalanceBeforeCreatingTask = IERC20(USDC).balanceOf(admin);
+
+        vault = ITokenizedStrategy(_vault);
+
+        uint256 vBProjectStratBeforeReport = IERC4626(SPARK_USDC_VAULT)
+            .balanceOf(address(vault));
+
+        vm.startPrank(address(admin));
+
+        // @IMPORTANT: make a getter functino for this later.
+        IERC20(USDC).approve(address(registry), 1288058);
+
+        registry.createTask(1, TC);
+        uint256 adminBalanceAfterCreatingTask = IERC20(USDC).balanceOf(admin);
 
         uint256 SharebalanceAdminAfterCreatingTask = vault.balanceOf(
             address(registry)
@@ -308,6 +364,7 @@ contract RegistryTest is Test {
             SharebalanceAdminAfterCreatingTask,
             SharebalanceAdminBeforeCreatingTask
         );
+        assertGt(adminBalanceBeforeCreatingTask, adminBalanceAfterCreatingTask);
         console.log("Test1");
     }
 
@@ -438,5 +495,19 @@ contract RegistryTest is Test {
         registry.changeTaskPayRate(1, 1, 1e6);
         DataTypes.TaskCreation memory afterChange = registry.getTask(1);
         assertEq(afterChange.amount, 1e6);
+    }
+
+    function test_WithdrawYield() public ProjectWithVault {
+        skip(15 days);
+        vm.roll(block.number + 15 days);
+        uint256 adminBalanceBefore = IERC20(USDC).balanceOf(admin);
+
+        vm.startPrank(admin);
+
+        registry.withdrawYield(1);
+
+        uint256 adminBalanceAfter = IERC20(USDC).balanceOf(admin);
+
+        assertGt(adminBalanceAfter, adminBalanceBefore);
     }
 }

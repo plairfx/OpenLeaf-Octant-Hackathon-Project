@@ -109,22 +109,17 @@ contract Registry is TaskManager {
                         RG.adminAccount,
                         profit - TC.amount // 0.4 USDC
                     );
-
-                    emit Test(
-                        IERC20(USDC).balanceOf(address(this)),
-                        profit - TC.amount
-                    );
-                    // price stays the same.
                 } else {
+                    emit Test(TC.amount, profit);
                     TC.amount = TC.amount - profit;
-
+                    emit Test(IERC20(USDC).balanceOf(msg.sender), TC.amount);
                     uint256 _amount = vault.convertToShares(TC.amount);
                     vault.withdraw(_amount, address(this), address(this), 0);
 
                     IERC20(USDC).safeTransferFrom(
                         msg.sender,
                         address(this),
-                        TC.amount - profit;
+                        TC.amount
                     );
                 }
             }
@@ -197,32 +192,20 @@ contract Registry is TaskManager {
         require(PR.adminAccount == msg.sender);
     }
 
-    // function withdrawYield() external {
-    //     DataTypes.ProjectReg memory RG = ProjectRegi[_projectID];
-    //     require(RG.adminAccount == msg.sender, "Must be admin");
+    function withdrawYield(uint64 _projectID) external {
+        DataTypes.ProjectReg memory RG = ProjectRegi[_projectID];
+        require(RG.adminAccount == msg.sender, "Must be admin");
 
-    //     vault = ProjectVault[_projectID];
+        vault = ITokenizedStrategy(ProjectVault[_projectID]);
 
-    //    (uint256 profit, ) = vault.report();
+        (uint256 profit, ) = vault.report();
 
-    //    IERC20(USDC).transfer(RG.adminAccount, profit);
-    // }
+        uint256 _amount = vault.convertToShares(profit);
 
-    // function withdrawAssets() external {
+        vault.withdraw(_amount, address(this), address(this), 0);
 
-    // }
-
-    // function withdrawAssetsAndYield() external {
-    //        DataTypes.ProjectReg memory RG = ProjectRegi[_projectID];
-    //     require(RG.adminAccount == msg.sender, "Must be admin");
-
-    //     vault = ProjectVault[_projectID];
-
-    //    (uint256 profit, ) = vault.report();
-
-    //    IERC20(USDC).transfer(RG.adminAccount, profit);
-
-    // }
+        IERC20(USDC).transfer(RG.adminAccount, profit);
+    }
 
     // AddContractToMonitor:
     // Allows the admin to add an address they want to add for transparency, For example:  Project has a new treasury address.
