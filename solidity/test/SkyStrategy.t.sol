@@ -167,6 +167,4 @@ contract SkyStrategy is Test {
         assertGt(vault.balanceOf(donationAddress), donationWalletBalance);
         console.log(vault.balanceOf(donationAddress));
     }
-
-    // we will test in a second if the profit is righ tor not.
 }

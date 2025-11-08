@@ -12,7 +12,6 @@ import {IERC4626} from "src/interfaces/IERC4626.sol";
 pragma solidity 0.8.30;
 
 contract SparkStrategy is BaseHealthCheck {
-    event Test(address, address);
     using SafeERC20 for IERC20;
 
     IERC20 public immutable USDC;
@@ -56,7 +55,7 @@ contract SparkStrategy is BaseHealthCheck {
         override
         returns (uint256 _totalAssets)
     {
-        _totalAssets = idleUSDCBalance() + balanceOfAssets();
+        _totalAssets = assetsAndYield();
     }
 
     function _freeFunds(uint256 amount) internal override {
@@ -74,5 +73,9 @@ contract SparkStrategy is BaseHealthCheck {
 
     function idleUSDCBalance() public view returns (uint256) {
         return USDC.balanceOf(address(this));
+    }
+
+    function assetsAndYield() public view returns (uint256) {
+        return idleUSDCBalance() + balanceOfAssets();
     }
 }

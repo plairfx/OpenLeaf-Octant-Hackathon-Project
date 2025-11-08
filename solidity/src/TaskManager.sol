@@ -14,7 +14,7 @@ abstract contract TaskManager {
     mapping(uint64 taskId => DataTypes.TaskCreation) TaskRegistry;
     mapping(uint64 submissionID => DataTypes.SubmissionCreation) SubmissionRegistry;
 
-    address USDC;
+    address immutable USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     uint64 taskID;
     uint64 submissionID;
 
@@ -55,12 +55,11 @@ abstract contract TaskManager {
     ) internal {
         DataTypes.TaskCreation memory TC = TaskRegistry[_taskID];
         require(TC.ProjectId != 0);
+        require(!TC.taskClosed, "task cannot be closed..");
 
         // depositFee.(To migitate the DOS);
         // check if tasks is stll open.
-        // initiialize the struct and store it!.fo
 
-        // uniswapv4, implementation could be here.
         submissionID++;
         SubmissionRegistry[submissionID] = SC;
 
