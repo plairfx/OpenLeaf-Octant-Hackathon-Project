@@ -17,6 +17,10 @@ import {
 
 pragma solidity 0.8.30;
 
+/// @title OpenLeaf's VaultFactory
+/// @author github.com/plairfx
+/// @notice deploys a vault for the caller.
+/// @dev This Factory contract deploys a spark strategy vault for project owners/users with funds.
 contract VaultFactory {
     SparkStrategy public strategy;
     YieldDonatingTokenizedStrategy public implementation;
@@ -26,6 +30,10 @@ contract VaultFactory {
     address immutable SPARK_USDC_VAULT =
         0x28B3a8fb53B741A8Fd78c0fb9A6B2393d896a43d;
 
+    /// @notice Factory that creates the vault
+    /// @param RG the configuration for the vault.
+    /// @dev this will deploy a sparkstratregy from spark.fi (Savings USDC strat).
+    /// returns both implementation and strategy address.
     function createVault(
         DataTypes.ProjectReg memory RG
     ) external returns (address, address) {

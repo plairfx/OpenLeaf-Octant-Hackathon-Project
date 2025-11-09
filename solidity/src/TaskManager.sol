@@ -12,14 +12,13 @@ contract TaskManager {
     mapping(uint64 taskId => DataTypes.TaskCreation) TaskRegistry;
 
     uint64 taskID;
+    address registry;
+    address owner;
 
     event TaskCreated(uint64 projectId, uint64 taskID);
     event TaskRemoved(uint64 projectId, uint64 taskID);
     event TaskRateChanged(uint64 taskID, uint256 newAmount);
     event TaskCompleted(uint64 taskID, uint64 submissionID);
-
-    address registry;
-    address owner;
 
     modifier onlyRegistry() {
         require(msg.sender == registry, "Not the registry");
@@ -35,11 +34,10 @@ contract TaskManager {
         owner = msg.sender;
     }
 
-    /**
-     * @param _projectId test
-     * @param TC ..
-     */
-
+    /// @notice creates a task
+    /// @param _projectId the projectId to create a task for.
+    /// @param TC the configuration for the Task
+    /// @dev this only accepts calls from the registry address.
     function createTask(
         uint64 _projectId,
         DataTypes.TaskCreation memory TC
@@ -51,6 +49,10 @@ contract TaskManager {
         emit TaskCreated(_projectId, taskID);
     }
 
+    /// @notice removes a task
+    /// @param _projectID the projectId to remove a task for.
+    /// @param _taskID the task to remove.
+    /// @dev this only accepts calls from the registry address.
     function removeTask(
         uint64 _projectID,
         uint64 _taskID
@@ -62,6 +64,10 @@ contract TaskManager {
         emit TaskRemoved(_projectID, _taskID);
     }
 
+    /// @notice changes the payment for a task
+    /// @param _taskID the projectId to change the payment rate for.
+    /// @param _amount the new payment rate for the task.
+    /// @dev this only accepts calls from the registry address.
     function changeTaskPayRate(
         uint64 _taskID,
         uint256 _amount
@@ -72,6 +78,10 @@ contract TaskManager {
         emit TaskRateChanged(_taskID, _amount);
     }
 
+    /// @notice close/completenish a task.
+    /// @param taskID the taskID you want to complete/payout.
+    /// @param submissionID the submission ID you want to complete with.
+    /// @dev this only accepts calls from the registry address.
     function closeTask(
         uint64 taskID,
         uint64 submissionID
@@ -82,10 +92,16 @@ contract TaskManager {
         emit TaskCompleted(taskID, submissionID);
     }
 
+    /// @notice sets the registryAddress that can call the main function
+    /// @param _newRegistry the new registry addess to set.
+    /// @dev only the Owner can set this.
     function setRegistry(address _newRegistry) external onlyOwner {
         registry = _newRegistry;
     }
 
+    /// @notice sets the registryAddress that can call the main function
+    /// @param _taskID the task info you want to get.
+    /// @return TC returns the configuration of a task.
     function getTask(
         uint64 _taskID
     ) public view returns (DataTypes.TaskCreation memory TC) {
