@@ -8,7 +8,7 @@ OpenLeaf is a public good/project that is meant to support:
 OpenLeaf does that by allowing protocols to add their project, they can create tasks, earn yield and show transparency by submitting information about their activity.
 
 **Protocols**
-- Create Tasks where users can participate and earn money from
+- Create and Manage Tasks where users can participate and earn money from
 - Earn yield through OpenLeaf's Strategies and use the yield for funding tasks
 
 **Users**
@@ -17,18 +17,11 @@ OpenLeaf does that by allowing protocols to add their project, they can create t
 
 
 
-## How does it work?
-
-
-
-
 ### Future goals
 - Enable Contract monitoring
 - Enable Submitting TX info for transactions from protocol owners.
 - Let users submit info/tx's they are concerned about to Openleaf
-
-
-
+and more..
 
 
 ### Setup
