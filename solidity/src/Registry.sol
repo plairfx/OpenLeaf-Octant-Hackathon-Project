@@ -98,138 +98,143 @@ contract Registry {
         vault.withdraw(_amount, address(this), address(this), 0);
         IERC20(USDC).transfer(RG.adminAccount, profit);
     }
-}
 
-/// @notice Allows a projectOwner to create a task.
-/// @param _projectID the projectID the admin wants to create a task for.
-/// @dev this allows the admin/protocol to pay with the yield from the vault.
-/// @param TC Struct that has the info about the new task.
-function createTask(
-    uint64 _projectID,
-    DataTypes.TaskCreation memory TC
-) external {
-    _adminCheck(_projectID);
+    /// @notice Allows a projectOwner to create a task.
+    /// @param _projectID the projectID the admin wants to create a task for.
+    /// @dev this allows the admin/protocol to pay with the yield from the vault.
+    /// @param TC Struct that has the info about the new task.
+    function createTask(
+        uint64 _projectID,
+        DataTypes.TaskCreation memory TC
+    ) external {
+        _adminCheck(_projectID);
 
-    DataTypes.ProjectReg memory RG = ProjectRegi[_projectID];
+        DataTypes.ProjectReg memory RG = ProjectRegi[_projectID];
 
-    require(
-        keccak256(abi.encode(TC.TaskDescription)) != empty &&
-            keccak256(abi.encode(TC.TaskName)) != empty
-    );
+        require(
+            keccak256(abi.encode(TC.TaskDescription)) != empty &&
+                keccak256(abi.encode(TC.TaskName)) != empty
+        );
 
-    if (RG.vault && ProjectVault[_projectID] != address(0x0)) {
-        vault = ITokenizedStrategy(ProjectVault[_projectID]);
+        if (RG.vault && ProjectVault[_projectID] != address(0x0)) {
+            vault = ITokenizedStrategy(ProjectVault[_projectID]);
 
-        (uint256 profit, ) = vault.report();
+            (uint256 profit, ) = vault.report();
 
-        if (profit > 0) {
-            if (profit >= TC.amount) {
-                uint256 _amount = vault.convertToShares(profit);
+            if (profit > 0) {
+                if (profit >= TC.amount) {
+                    uint256 _amount = vault.convertToShares(profit);
 
-                vault.withdraw(_amount, address(this), address(this), 0);
+                    vault.withdraw(_amount, address(this), address(this), 0);
 
-                IERC20(USDC).safeTransfer(RG.adminAccount, profit - TC.amount);
-            } else {
-                TC.amount = TC.amount - profit;
-                uint256 _amount = vault.convertToShares(TC.amount);
-                vault.withdraw(_amount, address(this), address(this), 0);
+                    IERC20(USDC).safeTransfer(
+                        RG.adminAccount,
+                        profit - TC.amount
+                    );
+                } else {
+                    TC.amount = TC.amount - profit;
+                    uint256 _amount = vault.convertToShares(TC.amount);
+                    vault.withdraw(_amount, address(this), address(this), 0);
 
-                IERC20(USDC).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    TC.amount
-                );
+                    IERC20(USDC).safeTransferFrom(
+                        msg.sender,
+                        address(this),
+                        TC.amount
+                    );
+                }
             }
+        } else if (TC.amount > 0) {
+            IERC20(USDC).safeTransferFrom(msg.sender, address(this), TC.amount);
         }
-    } else if (TC.amount > 0) {
-        IERC20(USDC).safeTransferFrom(msg.sender, address(this), TC.amount);
+        TM.createTask(_projectID, TC);
     }
-    TM.createTask(_projectID, TC);
-}
 
-/// @notice Allows a projectOwner to create a task.
-/// @param _projectID the projectID the admin wants to remove a task from
-/// @param _taskID the task that the admin needs to remove
-function removeTask(uint64 _projectID, uint64 _taskID) external {
-    _adminCheck(_projectID);
-    TM.removeTask(_projectID, _taskID);
-}
-
-/// @notice Allows an user to create a submision for a TASK
-/// @param _projectID the projectID the admin wants to remove a task from
-/// @param SC the info about the submission.
-function createSubmission(
-    uint64 _projectID,
-    DataTypes.SubmissionCreation memory SC
-) external {
-    DataTypes.TaskCreation memory TC = TM.getTask(SC.TaskID);
-
-    require(TC.ProjectId == _projectID);
-    require(
-        keccak256(abi.encode(SC.SubmissionDescription)) != empty &&
-            keccak256(abi.encode(SC.SubmissionName)) != empty &&
-            keccak256(abi.encode(SC.SubmissionLink)) != empty,
-        "Submission Name/Description/Link cannot be empty!"
-    );
-    SM.createSubmission(SC.TaskID, SC, TC);
-}
-
-/// @notice Allows the admin to accept a submission and pay the submitter of the submission.
-/// @param _projectID the projectID the admin wants to accept a task from.
-/// @param _taskID the task that the admin will complete.
-/// @param _submissionID the submissionID the admin wil accept.
-function acceptSubmission(
-    uint64 _projectID,
-    uint64 _taskID,
-    uint64 _submissionID
-) external {
-    DataTypes.ProjectReg memory PR = ProjectRegi[_projectID];
-    DataTypes.TaskCreation memory TC = TM.getTask(_taskID);
-    require(PR.adminAccount == msg.sender, "Must be admin");
-
-    SM.acceptSubmission(_taskID, _submissionID, TC);
-    DataTypes.SubmissionCreation memory SC = SM.getSubmission(_submissionID);
-
-    if (TC.amount > 0 && SC.user != address(0x0)) {
-        IERC20(USDC).safeTransfer(SC.user, TC.amount);
+    /// @notice Allows a projectOwner to create a task.
+    /// @param _projectID the projectID the admin wants to remove a task from
+    /// @param _taskID the task that the admin needs to remove
+    function removeTask(uint64 _projectID, uint64 _taskID) external {
+        _adminCheck(_projectID);
+        TM.removeTask(_projectID, _taskID);
     }
-    TM.closeTask(_taskID, _submissionID);
-}
-/// @notice Allows the admin to reject a submission.
-/// @param _projectID the projectID the admin wants to reject a submission
-/// @param _taskID the task that the admin will reject a submission from..
-/// @param _submissionID the submissionID the admin wil reject.
 
-function rejectSubmission(
-    uint64 _projectID,
-    uint64 _taskID,
-    uint64 _submissionID
-) external {
-    _adminCheck(_projectID);
-    SM.rejectSubmission(_taskID, _submissionID);
-}
+    /// @notice Allows an user to create a submision for a TASK
+    /// @param _projectID the projectID the admin wants to remove a task from
+    /// @param SC the info about the submission.
+    function createSubmission(
+        uint64 _projectID,
+        DataTypes.SubmissionCreation memory SC
+    ) external {
+        DataTypes.TaskCreation memory TC = TM.getTask(SC.TaskID);
 
-/// @notice Allows the admin change the pay rate of a task.
-/// @param _projectID the projectID the admin wants to change the taskpayrate from.
-/// @param _taskID the task that the admin will change the payrate from.
-/// @param _amount the new PayRate of the task.
-function changeTaskPayRate(
-    uint64 _projectID,
-    uint64 _taskID,
-    uint256 _amount
-) external {
-    _adminCheck(_projectID);
-    TM.changeTaskPayRate(_taskID, _amount);
-}
+        require(TC.ProjectId == _projectID);
+        require(
+            keccak256(abi.encode(SC.SubmissionDescription)) != empty &&
+                keccak256(abi.encode(SC.SubmissionName)) != empty &&
+                keccak256(abi.encode(SC.SubmissionLink)) != empty,
+            "Submission Name/Description/Link cannot be empty!"
+        );
+        SM.createSubmission(SC.TaskID, SC, TC);
+    }
 
-/// @notice returns the vault assicoiated with the projectID.
-/// @param projectID the project you want to get the vault from.
-/// @return vault returns the associated vault to the project.
-function getVault(uint64 projectID) public view returns (address vault) {
-    return ProjectVault[projectID];
-}
+    /// @notice Allows the admin to accept a submission and pay the submitter of the submission.
+    /// @param _projectID the projectID the admin wants to accept a task from.
+    /// @param _taskID the task that the admin will complete.
+    /// @param _submissionID the submissionID the admin wil accept.
+    function acceptSubmission(
+        uint64 _projectID,
+        uint64 _taskID,
+        uint64 _submissionID
+    ) external {
+        DataTypes.ProjectReg memory PR = ProjectRegi[_projectID];
+        DataTypes.TaskCreation memory TC = TM.getTask(_taskID);
+        require(PR.adminAccount == msg.sender, "Must be admin");
 
-function _adminCheck(uint64 _projectID) internal {
-    DataTypes.ProjectReg memory PR = ProjectRegi[_projectID];
-    require(PR.adminAccount == msg.sender);
+        SM.acceptSubmission(_taskID, _submissionID, TC);
+        DataTypes.SubmissionCreation memory SC = SM.getSubmission(
+            _submissionID
+        );
+
+        if (TC.amount > 0 && SC.user != address(0x0)) {
+            IERC20(USDC).safeTransfer(SC.user, TC.amount);
+        }
+        TM.closeTask(_taskID, _submissionID);
+    }
+    /// @notice Allows the admin to reject a submission.
+    /// @param _projectID the projectID the admin wants to reject a submission
+    /// @param _taskID the task that the admin will reject a submission from..
+    /// @param _submissionID the submissionID the admin wil reject.
+
+    function rejectSubmission(
+        uint64 _projectID,
+        uint64 _taskID,
+        uint64 _submissionID
+    ) external {
+        _adminCheck(_projectID);
+        SM.rejectSubmission(_taskID, _submissionID);
+    }
+
+    /// @notice Allows the admin change the pay rate of a task.
+    /// @param _projectID the projectID the admin wants to change the taskpayrate from.
+    /// @param _taskID the task that the admin will change the payrate from.
+    /// @param _amount the new PayRate of the task.
+    function changeTaskPayRate(
+        uint64 _projectID,
+        uint64 _taskID,
+        uint256 _amount
+    ) external {
+        _adminCheck(_projectID);
+        TM.changeTaskPayRate(_taskID, _amount);
+    }
+
+    /// @notice returns the vault assicoiated with the projectID.
+    /// @param projectID the project you want to get the vault from.
+    /// @return vault returns the associated vault to the project.
+    function getVault(uint64 projectID) public view returns (address vault) {
+        return ProjectVault[projectID];
+    }
+
+    function _adminCheck(uint64 _projectID) internal {
+        DataTypes.ProjectReg memory PR = ProjectRegi[_projectID];
+        require(PR.adminAccount == msg.sender);
+    }
 }
