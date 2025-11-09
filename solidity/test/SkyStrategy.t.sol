@@ -2,7 +2,7 @@
 
 import {Test, console} from "forge-std/Test.sol";
 import {DataTypes} from "src/types/DataTypes.sol";
-import {Registry, TaskManager} from "src/Registry.sol";
+import {Registry} from "src/Registry.sol";
 import {SparkStrategy, IERC4626} from "src/YDS/SparkStrategy.sol";
 import {USDC} from "test/Mocks/USDC.sol";
 import {

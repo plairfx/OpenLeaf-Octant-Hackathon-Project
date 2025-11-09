@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-import {TaskManager} from "src/TaskManager.sol";
 import {DataTypes} from "src/types/DataTypes.sol";
-import {SparkStrategy, IERC4626} from "src/YDS/SparkStrategy.sol";
+import {SparkStrategy} from "src/YDS/SparkStrategy.sol";
+import {ISubmissionManager} from "src/interfaces/ISubmissionManager.sol";
+import {ITaskManager} from "src/interfaces/ITaskManager.sol";
 import {
     SafeERC20,
     IERC20
@@ -14,21 +15,23 @@ import {
     ITokenizedStrategy
 } from "@octant-v2-core/src/core/interfaces/ITokenizedStrategy.sol";
 
+import {IVaultFactory} from "src/interfaces/IVaultFactory.sol";
+
 pragma solidity 0.8.30;
 
-contract Registry is TaskManager {
+contract Registry {
     using SafeERC20 for IERC20;
 
-    event Test(uint256, uint256);
-    IERC4626 public immutable Spark_USDC;
     SparkStrategy public strategy;
     YieldDonatingTokenizedStrategy public implementation;
     ITokenizedStrategy public vault;
+    ISubmissionManager public SM;
+    ITaskManager public TM;
+    IVaultFactory public VaultFactory;
 
+    address immutable USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     uint64 projectID;
     bytes32 empty = keccak256(abi.encode(""));
-    address immutable SPARK_USDC_VAULT =
-        0x28B3a8fb53B741A8Fd78c0fb9A6B2393d896a43d;
 
     event ProjectRegistered(
         string projectName,
@@ -41,21 +44,18 @@ contract Registry is TaskManager {
     mapping(uint64 projectid => DataTypes.ProjectReg) ProjectRegi;
     mapping(uint64 projectId => address vault) ProjectVault;
 
+    constructor(address _TM, address _SM, address _vaultFactory) {
+        TM = ITaskManager(_TM);
+        SM = ISubmissionManager(_SM);
+        VaultFactory = IVaultFactory(_vaultFactory);
+    }
+
     function registerAsProject(DataTypes.ProjectReg memory RG) external {
         if (RG.vault) {
             require(RG.token == USDC);
-            implementation = new YieldDonatingTokenizedStrategy();
-            strategy = new SparkStrategy(
-                USDC,
-                string.concat(RG.Name, "Vault"),
-                address(this),
-                address(this),
-                RG.adminAccount,
-                address(this),
-                false,
-                address(implementation),
-                SPARK_USDC_VAULT
-            );
+
+            (address implementation, address strategy) = VaultFactory
+                .createVault(RG);
 
             emit VaultCreated(address(strategy));
 
@@ -104,15 +104,12 @@ contract Registry is TaskManager {
 
                     vault.withdraw(_amount, address(this), address(this), 0);
 
-                    // 3.4 USDC - 3 USDC = 0.4 USDC
                     IERC20(USDC).safeTransfer(
                         RG.adminAccount,
-                        profit - TC.amount // 0.4 USDC
+                        profit - TC.amount
                     );
                 } else {
-                    emit Test(TC.amount, profit);
                     TC.amount = TC.amount - profit;
-                    emit Test(IERC20(USDC).balanceOf(msg.sender), TC.amount);
                     uint256 _amount = vault.convertToShares(TC.amount);
                     vault.withdraw(_amount, address(this), address(this), 0);
 
@@ -126,19 +123,19 @@ contract Registry is TaskManager {
         } else if (TC.amount > 0) {
             IERC20(USDC).safeTransferFrom(msg.sender, address(this), TC.amount);
         }
-        _createTask(_projectID, TC);
+        TM.createTask(_projectID, TC);
     }
 
     function removeTask(uint64 _projectID, uint64 _taskID) external {
         _adminCheck(_projectID);
-        _removeTask(_projectID, _taskID);
+        TM.removeTask(_projectID, _taskID);
     }
 
     function createSubmission(
         uint64 _projectID,
         DataTypes.SubmissionCreation memory SC
     ) external {
-        DataTypes.TaskCreation memory TC = TaskRegistry[SC.TaskID];
+        DataTypes.TaskCreation memory TC = TM.getTask(SC.TaskID);
 
         require(TC.ProjectId == _projectID);
         require(
@@ -147,7 +144,7 @@ contract Registry is TaskManager {
                 keccak256(abi.encode(SC.SubmissionLink)) != empty,
             "Submission Name/Description/Link cannot be empty!"
         );
-        _createSubmission(SC.TaskID, SC);
+        SM.createSubmission(SC.TaskID, SC, TC);
     }
 
     function acceptSubmission(
@@ -156,10 +153,18 @@ contract Registry is TaskManager {
         uint64 _submissionID
     ) external {
         DataTypes.ProjectReg memory PR = ProjectRegi[_projectID];
-        DataTypes.TaskCreation memory TC = TaskRegistry[_taskID];
+        DataTypes.TaskCreation memory TC = TM.getTask(_taskID);
         require(PR.adminAccount == msg.sender, "Must be admin");
 
-        _acceptSubmission(_taskID, _submissionID);
+        SM.acceptSubmission(_taskID, _submissionID, TC);
+        DataTypes.SubmissionCreation memory SC = SM.getSubmission(
+            _submissionID
+        );
+
+        if (TC.amount > 0 && SC.user != address(0x0)) {
+            IERC20(USDC).safeTransfer(SC.user, TC.amount);
+        }
+        TM.closeTask(_taskID, _submissionID);
     }
 
     function rejectSubmission(
@@ -168,7 +173,7 @@ contract Registry is TaskManager {
         uint64 _submissionID
     ) public {
         _adminCheck(_projectID);
-        _rejectSubmission(_taskID, _submissionID);
+        SM.rejectSubmission(_taskID, _submissionID);
     }
 
     function changeTaskPayRate(
@@ -177,10 +182,8 @@ contract Registry is TaskManager {
         uint256 _amount
     ) external {
         _adminCheck(_projectID);
-        _changeTaskPayRate(_taskID, _amount);
+        TM.changeTaskPayRate(_taskID, _amount);
     }
-
-    // function getProjectInfo() public {}
 
     function getVault(uint64 projectID) public view returns (address vault) {
         return ProjectVault[projectID];
@@ -188,7 +191,6 @@ contract Registry is TaskManager {
 
     function _adminCheck(uint64 _projectID) internal {
         DataTypes.ProjectReg memory PR = ProjectRegi[_projectID];
-        // @Add signature logic later on.
         require(PR.adminAccount == msg.sender);
     }
 
@@ -197,28 +199,10 @@ contract Registry is TaskManager {
         require(RG.adminAccount == msg.sender, "Must be admin");
 
         vault = ITokenizedStrategy(ProjectVault[_projectID]);
-
         (uint256 profit, ) = vault.report();
 
         uint256 _amount = vault.convertToShares(profit);
-
         vault.withdraw(_amount, address(this), address(this), 0);
-
         IERC20(USDC).transfer(RG.adminAccount, profit);
     }
-
-    // AddContractToMonitor:
-    // Allows the admin to add an address they want to add for transparency, For example:  Project has a new treasury address.
-
-    // Emits  ContractMonitored()
-
-    // RemoveContractToMonitor:
-    // Allows the admin to Remove an address they want to  remove, For example:  Project has a new treasury address.
-
-    // Emits  RemoveContractMonitored()
-
-    // SubmitInformationAboutATransaction:
-    // Add a information about a transaction,  this also allows them to edit.
-
-    // Emits  InformationSubmitted()
 }
