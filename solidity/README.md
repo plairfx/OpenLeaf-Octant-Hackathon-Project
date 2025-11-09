@@ -13,14 +13,19 @@ OpenLeaf does that by allowing protocols to add their project, they can create t
 
 **Users**
 - Create Submissions and Earn money!
-- Research the protocol they are invested in through Openleaf which allows to track transaction/direction a protocol maks.w
+- Research the protocol they are invested in through Openleaf which allows to track transaction/direction a protocol makes.
 
-### Future technical goal
+
+
+## How does it work?
+
+
+
+
+### Future goals
 - Enable Contract monitoring
-- Enable Submitting TX info for transactions
-- Let users submit tx they are concerned about to the platform
-
-
+- Enable Submitting TX info for transactions from protocol owners.
+- Let users submit info/tx's they are concerned about to Openleaf
 
 
 
